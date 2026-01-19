@@ -1,11 +1,21 @@
-import pool from '../config/database.js';
+import TagService from '../src/services/TagService.js';
+import { uuidParamValidation, paginationValidation } from '../src/validators/common.validator.js';
+import { body } from 'express-validator';
+import { validate } from '../src/validators/auth.validator.js';
 
 export const getTags = async (req, res, next) => {
   try {
-    const [tags] = await pool.execute(
-      'SELECT * FROM tags ORDER BY name ASC'
-    );
-    res.json({ data: tags });
+    const tags = await TagService.getTags(req.query);
+    res.json(tags);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTagById = async (req, res, next) => {
+  try {
+    const tag = await TagService.getTagById(req.params.id);
+    res.json({ data: tag });
   } catch (error) {
     next(error);
   }
@@ -13,47 +23,23 @@ export const getTags = async (req, res, next) => {
 
 export const createTag = async (req, res, next) => {
   try {
-    const { name, color } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ error: 'Tag name is required' });
-    }
-
-    const [result] = await pool.execute(
-      'INSERT INTO tags (name, color) VALUES (?, ?)',
-      [name, color || null]
-    );
-
-    const [newTag] = await pool.execute(
-      'SELECT * FROM tags WHERE id = ?',
-      [result.insertId]
-    );
-
-    res.status(201).json({ data: newTag[0] });
+    const tag = await TagService.createTag(req.body);
+    res.status(201).json({
+      message: 'Tag created successfully',
+      data: tag
+    });
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'Tag already exists' });
-    }
     next(error);
   }
 };
 
 export const updateTag = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { name, color } = req.body;
-
-    await pool.execute(
-      'UPDATE tags SET name = ?, color = ? WHERE id = ?',
-      [name, color, id]
-    );
-
-    const [updatedTag] = await pool.execute(
-      'SELECT * FROM tags WHERE id = ?',
-      [id]
-    );
-
-    res.json({ data: updatedTag[0] });
+    const tag = await TagService.updateTag(req.params.id, req.body);
+    res.json({
+      message: 'Tag updated successfully',
+      data: tag
+    });
   } catch (error) {
     next(error);
   }
@@ -61,63 +47,44 @@ export const updateTag = async (req, res, next) => {
 
 export const deleteTag = async (req, res, next) => {
   try {
-    const { id } = req.params;
-
-    await pool.execute('DELETE FROM tags WHERE id = ?', [id]);
-
-    res.json({ message: 'Tag deleted' });
+    await TagService.deleteTag(req.params.id);
+    res.json({ message: 'Tag deleted successfully' });
   } catch (error) {
     next(error);
   }
 };
 
-export const getTicketTags = async (req, res, next) => {
-  try {
-    const { ticketId } = req.params;
+export const createTagValidation = validate([
+  body('name')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Name must be between 1 and 100 characters'),
+  body('color')
+    .optional()
+    .matches(/^#[0-9A-F]{6}$/i)
+    .withMessage('Color must be a valid hex color'),
+  body('description')
+    .optional()
+    .trim()
+]);
 
-    const [tags] = await pool.execute(
-      `SELECT t.* FROM tags t
-       JOIN ticket_tags tt ON t.id = tt.tag_id
-       WHERE tt.ticket_id = ?`,
-      [ticketId]
-    );
+export const updateTagValidation = validate([
+  uuidParamValidation('id'),
+  body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Name must be between 1 and 100 characters'),
+  body('color')
+    .optional()
+    .matches(/^#[0-9A-F]{6}$/i)
+    .withMessage('Color must be a valid hex color'),
+  body('description')
+    .optional()
+    .trim()
+]);
 
-    res.json({ data: tags });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const addTagToTicket = async (req, res, next) => {
-  try {
-    const { ticketId } = req.params;
-    const { tagId } = req.body;
-
-    await pool.execute(
-      'INSERT INTO ticket_tags (ticket_id, tag_id) VALUES (?, ?)',
-      [ticketId, tagId]
-    );
-
-    res.json({ message: 'Tag added to ticket' });
-  } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'Tag already added to ticket' });
-    }
-    next(error);
-  }
-};
-
-export const removeTagFromTicket = async (req, res, next) => {
-  try {
-    const { ticketId, tagId } = req.params;
-
-    await pool.execute(
-      'DELETE FROM ticket_tags WHERE ticket_id = ? AND tag_id = ?',
-      [ticketId, tagId]
-    );
-
-    res.json({ message: 'Tag removed from ticket' });
-  } catch (error) {
-    next(error);
-  }
+export {
+  uuidParamValidation as getTagValidation,
+  paginationValidation as getTagsValidation
 };

@@ -1,177 +1,120 @@
-import pool from '../config/database.js';
-import { sendTicketNotification } from '../services/email.service.js';
+import CommentModel from '../src/models/CommentModel.js';
+import TicketModel from '../src/models/TicketModel.js';
+import ActivityModel from '../src/models/ActivityModel.js';
+import NotificationService from '../src/services/NotificationService.js';
+import { uuidParamValidation } from '../src/validators/common.validator.js';
+import { body, param } from 'express-validator';
+import { validate } from '../src/validators/auth.validator.js';
 
+/**
+ * Get comments for a ticket
+ */
 export const getComments = async (req, res, next) => {
   try {
-    const { ticketId } = req.params;
-
-    // Verify ticket access
-    const [tickets] = await pool.execute('SELECT project_id FROM tickets WHERE id = ?', [ticketId]);
-    if (tickets.length === 0) {
+    // Verify ticket exists and user has access
+    const ticket = await TicketModel.findById(req.params.ticketId);
+    if (!ticket) {
       return res.status(404).json({ error: 'Ticket not found' });
     }
 
-    if (req.user.role !== 'ADMIN') {
-      const [members] = await pool.execute(
-        'SELECT user_id FROM project_members WHERE project_id = ? AND user_id = ?',
-        [tickets[0].project_id, req.user.id]
-      );
-
-      const [projects] = await pool.execute('SELECT team_id FROM projects WHERE id = ?', [
-        tickets[0].project_id
-      ]);
-
-      if (
-        members.length === 0 &&
-        (!projects[0] || projects[0].team_id !== req.user.team_id)
-      ) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-    }
-
-    const [comments] = await pool.execute(
-      `SELECT tc.id, tc.comment_text, tc.attachment_url, tc.created_at, tc.updated_at,
-              u.id as user_id, u.name as user_name, u.email as user_email
-       FROM ticket_comments tc
-       JOIN users u ON tc.user_id = u.id
-       WHERE tc.ticket_id = ?
-       ORDER BY tc.created_at ASC`,
-      [ticketId]
-    );
-
-    res.json(comments);
+    const comments = await CommentModel.findByTicketId(req.params.ticketId);
+    res.json({ data: comments });
   } catch (error) {
     next(error);
   }
 };
 
-export const createComment = async (req, res, next) => {
-  try {
-    const { ticket_id, comment_text } = req.body;
-    const attachmentUrl = req.file ? `/uploads/${req.file.filename}` : null;
-
-    // Verify ticket access
-    const [tickets] = await pool.execute('SELECT project_id FROM tickets WHERE id = ?', [ticket_id]);
-    if (tickets.length === 0) {
-      return res.status(404).json({ error: 'Ticket not found' });
-    }
-
-    if (req.user.role !== 'ADMIN') {
-      const [members] = await pool.execute(
-        'SELECT user_id FROM project_members WHERE project_id = ? AND user_id = ?',
-        [tickets[0].project_id, req.user.id]
-      );
-
-      const [projects] = await pool.execute('SELECT team_id FROM projects WHERE id = ?', [
-        tickets[0].project_id
-      ]);
-
-      if (
-        members.length === 0 &&
-        (!projects[0] || projects[0].team_id !== req.user.team_id)
-      ) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-    }
-
-    const [result] = await pool.execute(
-      'INSERT INTO ticket_comments (ticket_id, user_id, comment_text, attachment_url) VALUES (?, ?, ?, ?)',
-      [ticket_id, req.user.id, comment_text, attachmentUrl]
-    );
-
-    const [newComment] = await pool.execute(
-      `SELECT tc.id, tc.comment_text, tc.attachment_url, tc.created_at,
-              u.id as user_id, u.name as user_name, u.email as user_email
-       FROM ticket_comments tc
-       JOIN users u ON tc.user_id = u.id
-       WHERE tc.id = ?`,
-      [result.insertId]
-    );
-
-    // Get ticket for notification
-    const [ticketData] = await pool.execute(
-      `SELECT t.*, 
-              p.name as project_name, 
-              r.name as reporter_name, r.email as reporter_email,
-              a.name as assignee_name, a.email as assignee_email
-       FROM tickets t
-       LEFT JOIN projects p ON t.project_id = p.id
-       LEFT JOIN users r ON t.reporter_id = r.id
-       LEFT JOIN users a ON t.assignee_id = a.id
-       WHERE t.id = ?`,
-      [ticket_id]
-    );
-
-    // Send notification
-    try {
-      await sendTicketNotification('commented', ticketData[0]);
-    } catch (emailError) {
-      console.error('Failed to send email notification:', emailError);
-    }
-
-    res.status(201).json(newComment[0]);
-  } catch (error) {
-    next(error);
-  }
-};
-
+/**
+ * Update comment
+ */
 export const updateComment = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { comment_text } = req.body;
-
-    // Check if comment exists and user owns it
-    const [comments] = await pool.execute('SELECT user_id FROM ticket_comments WHERE id = ?', [id]);
-    if (comments.length === 0) {
+    const comment = await CommentModel.findById(req.params.id);
+    if (!comment) {
       return res.status(404).json({ error: 'Comment not found' });
     }
 
-    if (req.user.role !== 'ADMIN' && comments[0].user_id !== req.user.id) {
+    // Check permissions - only comment author can update
+    if (comment.user_id !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    await pool.execute('UPDATE ticket_comments SET comment_text = ? WHERE id = ?', [
-      comment_text,
-      id
-    ]);
+    const updatedComment = await CommentModel.update(req.params.id, {
+      comment_text: req.body.comment_text
+    });
 
-    const [updatedComment] = await pool.execute(
-      `SELECT tc.id, tc.comment_text, tc.attachment_url, tc.created_at, tc.updated_at,
-              u.id as user_id, u.name as user_name, u.email as user_email
-       FROM ticket_comments tc
-       JOIN users u ON tc.user_id = u.id
-       WHERE tc.id = ?`,
-      [id]
+    // Log activity
+    await ActivityModel.logActivity(
+      comment.ticket_id,
+      req.user.id,
+      'COMMENT_UPDATED',
+      { comment_text: comment.comment_text },
+      { comment_text: req.body.comment_text },
+      'Comment updated'
     );
 
-    res.json(updatedComment[0]);
+    const commentWithUser = await CommentModel.findByIdWithUser(req.params.id);
+    res.json({
+      message: 'Comment updated successfully',
+      data: commentWithUser
+    });
   } catch (error) {
     next(error);
   }
 };
 
+/**
+ * Delete comment
+ */
 export const deleteComment = async (req, res, next) => {
   try {
-    const { id } = req.params;
-
-    // Check if comment exists and user owns it
-    const [comments] = await pool.execute('SELECT user_id FROM ticket_comments WHERE id = ?', [id]);
-    if (comments.length === 0) {
+    const comment = await CommentModel.findById(req.params.id);
+    if (!comment) {
       return res.status(404).json({ error: 'Comment not found' });
     }
 
-    if (req.user.role !== 'ADMIN' && comments[0].user_id !== req.user.id) {
+    // Check permissions - only comment author or admin can delete
+    if (comment.user_id !== req.user.id && 
+        req.user.role !== 'SUPER_ADMIN' && 
+        req.user.role !== 'ORG_ADMIN') {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const [result] = await pool.execute('DELETE FROM ticket_comments WHERE id = ?', [id]);
+    // Log activity
+    await ActivityModel.logActivity(
+      comment.ticket_id,
+      req.user.id,
+      'COMMENT_DELETED',
+      { comment_id: comment.id },
+      null,
+      'Comment deleted'
+    );
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Comment not found' });
-    }
-
+    await CommentModel.delete(req.params.id);
     res.json({ message: 'Comment deleted successfully' });
   } catch (error) {
     next(error);
   }
 };
+
+export const updateCommentValidation = validate([
+  param('id')
+    .isUUID()
+    .withMessage('Invalid comment ID format'),
+  body('comment_text')
+    .trim()
+    .notEmpty()
+    .withMessage('Comment text is required')
+]);
+
+export const deleteCommentValidation = validate([
+  param('id')
+    .isUUID()
+    .withMessage('Invalid comment ID format')
+]);
+
+export const getCommentsValidation = validate([
+  param('ticketId')
+    .isUUID()
+    .withMessage('Invalid ticket ID format')
+]);

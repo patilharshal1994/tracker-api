@@ -6,6 +6,8 @@ import {
   getProjectsValidation
 } from '../src/validators/project.validator.js';
 import { uuidParamValidation } from '../src/validators/common.validator.js';
+import { body } from 'express-validator';
+import { validate } from '../src/validators/auth.validator.js';
 
 export const getProjects = async (req, res, next) => {
   try {
@@ -70,6 +72,13 @@ export const addMember = async (req, res, next) => {
   }
 };
 
+export const addMemberValidation = validate([
+  uuidParamValidation('id'),
+  body('user_id')
+    .isUUID()
+    .withMessage('Invalid user ID format')
+]);
+
 export const removeMember = async (req, res, next) => {
   try {
     await ProjectService.removeMember(req.user, req.params.id, req.params.userId);
@@ -83,5 +92,6 @@ export {
   createProjectValidation,
   updateProjectValidation,
   getProjectValidation,
-  getProjectsValidation
+  getProjectsValidation,
+  addMemberValidation
 };

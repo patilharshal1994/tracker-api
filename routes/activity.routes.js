@@ -1,11 +1,15 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.middleware.js';
-import { getTicketActivities } from '../controllers/activity.controller.js';
+import {
+  getTicketActivities,
+  getTicketActivitiesValidation
+} from '../controllers/activity.controller.js';
 
 const router = express.Router();
 
 router.use(authenticate);
 
-router.get('/tickets/:ticketId', getTicketActivities);
+// Get activities for a ticket
+router.get('/tickets/:ticketId', getTicketActivitiesValidation, getTicketActivities);
 
 export default router;

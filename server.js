@@ -15,6 +15,7 @@ const __dirname = dirname(__filename);
 // Import routes
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
+import organizationRoutes from './routes/organization.routes.js';
 import teamRoutes from './routes/team.routes.js';
 import projectRoutes from './routes/project.routes.js';
 import ticketRoutes from './routes/ticket.routes.js';
@@ -54,6 +55,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/organizations', organizationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/projects', projectRoutes);

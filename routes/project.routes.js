@@ -10,7 +10,8 @@ import {
   createProjectValidation,
   updateProjectValidation,
   getProjectValidation,
-  getProjectsValidation
+  getProjectsValidation,
+  addMemberValidation
 } from '../controllers/project.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { uuidParamValidation } from '../src/validators/common.validator.js';
@@ -36,7 +37,7 @@ router.put('/:id', updateProjectValidation, updateProject);
 router.delete('/:id', getProjectValidation, deleteProject);
 
 // Add member to project
-router.post('/:id/members', getProjectValidation, addMember);
+router.post('/:id/members', addMemberValidation, addMember);
 
 // Remove member from project
 router.delete('/:id/members/:userId', getProjectValidation, uuidParamValidation('userId'), removeMember);

@@ -4,11 +4,13 @@ import { validate } from './auth.validator.js';
 /**
  * UUID parameter validation
  */
-export const uuidParamValidation = (paramName = 'id') => validate([
-  param(paramName)
-    .isUUID()
-    .withMessage(`Invalid ${paramName} format`)
-]);
+export const uuidParamValidation = (paramName = 'id') => {
+  return validate([
+    param(paramName)
+      .isUUID()
+      .withMessage(`Invalid ${paramName} format`)
+  ]);
+};
 
 /**
  * Pagination query validation

@@ -61,14 +61,12 @@ class TicketService {
     }
 
     // Get related data
-    const [tags, watchers, comments, activities, relationships, timeLogs] = await Promise.all([
-      TagModel.findByTicketId(ticketId),
-      WatcherModel.findByTicketId(ticketId),
-      CommentModel.findByTicketId(ticketId),
-      ActivityModel.findByTicketId(ticketId),
-      RelationshipModel.findByTicketId(ticketId),
-      TimeLogModel.findByTicketId(ticketId)
-    ]);
+    const tags = await TagModel.findByTicketId(ticketId);
+    const watchers = await WatcherModel.findByTicketId(ticketId);
+    const comments = await CommentModel.findByTicketId(ticketId);
+    const activities = await ActivityModel.findByTicketId(ticketId);
+    const relationships = await RelationshipModel.findByTicketId(ticketId);
+    const timeLogs = await TimeLogModel.findByTicketId(ticketId);
 
     return {
       ...ticket,

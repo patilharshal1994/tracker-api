@@ -4,16 +4,25 @@ import {
   getNotifications,
   markAsRead,
   markAllAsRead,
-  deleteNotification
+  getUnreadCount,
+  getNotificationsValidation,
+  getNotificationValidation
 } from '../controllers/notification.controller.js';
 
 const router = express.Router();
 
 router.use(authenticate);
 
-router.get('/', getNotifications);
-router.put('/:id/read', markAsRead);
+// Get all notifications for current user
+router.get('/', getNotificationsValidation, getNotifications);
+
+// Get unread count
+router.get('/unread-count', getUnreadCount);
+
+// Mark notification as read
+router.put('/:id/read', getNotificationValidation, markAsRead);
+
+// Mark all notifications as read
 router.put('/read-all', markAllAsRead);
-router.delete('/:id', deleteNotification);
 
 export default router;
