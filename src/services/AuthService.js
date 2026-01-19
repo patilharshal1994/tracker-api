@@ -26,9 +26,15 @@ class AuthService {
       throw new Error('Invalid credentials');
     }
 
-    // Generate tokens
+    // Generate tokens with all necessary user info for hierarchical access control
     const accessToken = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { 
+        userId: user.id, 
+        email: user.email, 
+        role: user.role,
+        organization_id: user.organization_id,
+        team_id: user.team_id
+      },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_ACCESS_EXPIRY || '30m' }
     );
@@ -102,9 +108,15 @@ class AuthService {
         throw new Error('User not found or inactive');
       }
 
-      // Generate new access token
+      // Generate new access token with all necessary user info
       const accessToken = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
+        { 
+          userId: user.id, 
+          email: user.email, 
+          role: user.role,
+          organization_id: user.organization_id,
+          team_id: user.team_id
+        },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_ACCESS_EXPIRY || '30m' }
       );

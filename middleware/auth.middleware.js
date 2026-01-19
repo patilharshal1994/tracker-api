@@ -16,7 +16,12 @@ export const authenticate = async (req, res, next) => {
     const token = authHeader.substring(7);
     
     try {
+      // Verify JWT token and decode payload
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      
+      if (!decoded || !decoded.userId) {
+        return res.status(401).json({ error: 'Invalid token payload' });
+      }
       
       // Verify user still exists and is active - fetch all user fields including organization_id
       const [users] = await pool.query(
@@ -24,7 +29,7 @@ export const authenticate = async (req, res, next) => {
           id, name, email, role, organization_id, team_id, is_active, 
           phone, designation, department, specialty, bio
         FROM users WHERE id = ?`,
-        [decoded.userId || decoded.user?.id]
+        [decoded.userId]
       );
 
       if (users.length === 0) {
