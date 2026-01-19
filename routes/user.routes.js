@@ -1,59 +1,40 @@
 import express from 'express';
-import { body } from 'express-validator';
 import {
   getUsers,
   getUserById,
   createUser,
   updateUser,
   deleteUser,
-  getCurrentUser
+  resetPassword,
+  createUserValidation,
+  updateUserValidation,
+  getUserValidation,
+  getUsersValidation,
+  resetPasswordValidation
 } from '../controllers/user.controller.js';
-import { authenticate, authorize } from '../middleware/auth.middleware.js';
-import { validate } from '../middleware/validation.middleware.js';
+import { authenticate } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
 
-// Get current user profile
-router.get('/me', getCurrentUser);
-
-// Get all users (admin only)
-router.get('/', authorize('ADMIN'), getUsers);
+// Get all users with filtering and pagination
+router.get('/', getUsersValidation, getUsers);
 
 // Get user by ID
-router.get('/:id', getUserById);
+router.get('/:id', getUserValidation, getUserById);
 
-// Create user (admin only)
-router.post(
-  '/',
-  authorize('ADMIN'),
-  [
-    body('name').trim().notEmpty().isLength({ min: 2, max: 255 }),
-    body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 8 }).optional(),
-    body('role').isIn(['ADMIN', 'USER']).optional()
-  ],
-  validate,
-  createUser
-);
+// Create user
+router.post('/', createUserValidation, createUser);
 
 // Update user
-router.put(
-  '/:id',
-  [
-    body('name').trim().isLength({ min: 2, max: 255 }).optional(),
-    body('email').isEmail().normalizeEmail().optional(),
-    body('role').isIn(['ADMIN', 'USER']).optional(),
-    body('team_id').isInt().optional({ nullable: true }),
-    body('is_active').isBoolean().optional()
-  ],
-  validate,
-  updateUser
-);
+router.put('/:id', updateUserValidation, updateUser);
 
-// Delete user (admin only)
-router.delete('/:id', authorize('ADMIN'), deleteUser);
+// Delete user
+router.delete('/:id', getUserValidation, deleteUser);
+
+// Reset user password
+router.post('/:id/reset-password', resetPasswordValidation, resetPassword);
 
 export default router;
