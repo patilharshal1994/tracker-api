@@ -11,8 +11,9 @@ import { validate } from '../src/validators/auth.validator.js';
 
 export const getProjects = async (req, res, next) => {
   try {
-    const projects = await ProjectService.getProjects(req.user, req.query);
-    res.json(projects);
+    const result = await ProjectService.getProjects(req.user, req.query);
+    // Frontend expects response.data to be array
+    res.json(result.data || result);
   } catch (error) {
     next(error);
   }

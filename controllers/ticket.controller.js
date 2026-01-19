@@ -14,6 +14,7 @@ import {
 export const getTickets = async (req, res, next) => {
   try {
     const tickets = await TicketService.getTickets(req.user, req.query);
+    // Frontend expects response.data to be array
     res.json(tickets);
   } catch (error) {
     next(error);
@@ -23,7 +24,8 @@ export const getTickets = async (req, res, next) => {
 export const getTicketById = async (req, res, next) => {
   try {
     const ticket = await TicketService.getTicketById(req.user, req.params.id);
-    res.json({ data: ticket });
+    // Frontend expects response.data to be the ticket object
+    res.json(ticket);
   } catch (error) {
     next(error);
   }

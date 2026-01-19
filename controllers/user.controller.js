@@ -6,8 +6,9 @@ import { createUserValidation, updateUserValidation, getUserValidation, getUsers
  */
 export const getUsers = async (req, res, next) => {
   try {
-    const users = await UserService.getUsers(req.user, req.query);
-    res.json(users);
+    const result = await UserService.getUsers(req.user, req.query);
+    // Frontend expects response.data to be array
+    res.json(result.data || result);
   } catch (error) {
     next(error);
   }
@@ -19,7 +20,61 @@ export const getUsers = async (req, res, next) => {
 export const getUserById = async (req, res, next) => {
   try {
     const user = await UserService.getUserById(req.user, req.params.id);
-    res.json({ data: user });
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get current user profile
+ */
+export const getCurrentUser = async (req, res, next) => {
+  try {
+    const user = await UserService.getUserById(req.user, req.user.id);
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get user profile (for /users/:id/profile)
+ */
+export const getUserProfile = async (req, res, next) => {
+  try {
+    const user = await UserService.getUserById(req.user, req.params.id);
+    // Return profile fields only
+    const profile = {
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      designation: user.designation,
+      department: user.department,
+      specialty: user.specialty,
+      experience: user.experience,
+      education: user.education,
+      address: user.address,
+      city: user.city,
+      country: user.country,
+      bio: user.bio
+    };
+    res.json(profile);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update user profile (for /users/:id/profile)
+ */
+export const updateUserProfile = async (req, res, next) => {
+  try {
+    const user = await UserService.updateUser(req.user, req.params.id, req.body);
+    res.json({
+      message: 'Profile updated successfully',
+      data: user
+    });
   } catch (error) {
     next(error);
   }

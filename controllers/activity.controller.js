@@ -5,8 +5,9 @@ import { validate } from '../src/validators/auth.validator.js';
 
 export const getTicketActivities = async (req, res, next) => {
   try {
-    const activities = await ActivityService.getTicketActivities(req.params.ticketId, req.query);
-    res.json(activities);
+    const result = await ActivityService.getTicketActivities(req.params.ticketId, req.query);
+    // Frontend expects response.data to be array
+    res.json(result.data || result);
   } catch (error) {
     next(error);
   }

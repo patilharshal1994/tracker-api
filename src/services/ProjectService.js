@@ -25,10 +25,8 @@ class ProjectService {
     const projects = await ProjectModel.findWithFilters(currentUser, filters, pagination);
     const total = await ProjectModel.count(filters);
 
-    return {
-      data: projects,
-      pagination: createPaginationMeta(total, pagination.page, pagination.limit)
-    };
+    // Frontend expects array directly
+    return projects;
   }
 
   /**

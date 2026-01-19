@@ -9,6 +9,7 @@ import {
 export const getTeams = async (req, res, next) => {
   try {
     const teams = await TeamService.getTeams(req.user, req.query);
+    // Frontend expects response.data to be array
     res.json(teams);
   } catch (error) {
     next(error);

@@ -17,6 +17,9 @@ router.use(authenticate);
 // Get comments for a ticket
 router.get('/ticket/:ticketId', getCommentsValidation, getComments);
 
+// Create comment (with file upload support)
+router.post('/', createCommentValidation, createComment);
+
 // Update comment
 router.put('/:id', updateCommentValidation, updateComment);
 

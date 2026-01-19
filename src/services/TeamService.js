@@ -24,10 +24,8 @@ class TeamService {
     const teams = await TeamModel.findWithDetails(currentUser, filters, pagination);
     const total = await TeamModel.count(filters);
 
-    return {
-      data: teams,
-      pagination: createPaginationMeta(total, pagination.page, pagination.limit)
-    };
+    // Frontend expects array directly
+    return teams;
   }
 
   /**

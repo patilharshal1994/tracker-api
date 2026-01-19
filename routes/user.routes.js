@@ -19,8 +19,17 @@ const router = express.Router();
 // All routes require authentication
 router.use(authenticate);
 
+// Get current user
+router.get('/me', getCurrentUser);
+
 // Get all users with filtering and pagination
 router.get('/', getUsersValidation, getUsers);
+
+// Get user profile
+router.get('/:id/profile', getUserValidation, getUserProfile);
+
+// Update user profile
+router.put('/:id/profile', updateUserValidation, updateUserProfile);
 
 // Get user by ID
 router.get('/:id', getUserValidation, getUserById);

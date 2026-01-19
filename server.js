@@ -23,6 +23,7 @@ import commentRoutes from './routes/comment.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import activityRoutes from './routes/activity.routes.js';
 import tagRoutes from './routes/tag.routes.js';
+import templateRoutes from './routes/template.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/error.middleware.js';
@@ -64,6 +65,7 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/tags', tagRoutes);
+app.use('/api/ticket-templates', templateRoutes);
 
 // Serve uploaded files (in production, use proper static file serving)
 app.use('/uploads', express.static(join(__dirname, 'uploads')));

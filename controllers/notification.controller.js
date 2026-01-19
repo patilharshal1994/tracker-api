@@ -5,8 +5,9 @@ import { validate } from '../src/validators/auth.validator.js';
 
 export const getNotifications = async (req, res, next) => {
   try {
-    const notifications = await NotificationService.getUserNotifications(req.user.id, req.query);
-    res.json(notifications);
+    const result = await NotificationService.getUserNotifications(req.user.id, req.query);
+    // Frontend expects response.data to be array
+    res.json(result.data || result);
   } catch (error) {
     next(error);
   }

@@ -34,13 +34,19 @@ class TicketService {
     if (query.is_breached !== undefined) filters.is_breached = query.is_breached === 'true';
     if (query.search) filters.search = query.search;
 
+    // Handle assigned_to_me and reported_by_me filters
+    if (query.assigned_to_me === 'true') {
+      filters.assignee_id = currentUser.id;
+    }
+    if (query.reported_by_me === 'true') {
+      filters.reporter_id = currentUser.id;
+    }
+
     const tickets = await TicketModel.findWithFilters(currentUser, filters, pagination);
     const total = await TicketModel.countWithFilters(currentUser, filters);
 
-    return {
-      data: tickets,
-      pagination: createPaginationMeta(total, pagination.page, pagination.limit)
-    };
+    // Frontend expects array directly, not wrapped in data
+    return tickets;
   }
 
   /**
@@ -62,20 +68,24 @@ class TicketService {
 
     // Get related data
     const tags = await TagModel.findByTicketId(ticketId);
-    const watchers = await WatcherModel.findByTicketId(ticketId);
+    const watchersData = await WatcherModel.findByTicketId(ticketId);
     const comments = await CommentModel.findByTicketId(ticketId);
     const activities = await ActivityModel.findByTicketId(ticketId);
     const relationships = await RelationshipModel.findByTicketId(ticketId);
     const timeLogs = await TimeLogModel.findByTicketId(ticketId);
 
+    // Extract watcher user IDs for frontend compatibility
+    const watchers = watchersData.map(w => w.user_id);
+
     return {
       ...ticket,
-      tags,
+      tags: tags.map(t => ({ id: t.id, name: t.name, color: t.color })),
       watchers,
       comments,
       activities,
       relationships,
-      timeLogs
+      timeLogs,
+      attachments: [] // Attachments will be added when file upload is implemented
     };
   }
 
