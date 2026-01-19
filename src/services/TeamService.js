@@ -78,6 +78,17 @@ class TeamService {
       }
     }
 
+    // Check for duplicate team name within organization
+    if (teamData.organization_id && teamData.name) {
+      const existing = await TeamModel.findByNameAndOrganization(
+        teamData.name.trim(), 
+        teamData.organization_id
+      );
+      if (existing) {
+        throw new Error('Team name already exists in this organization');
+      }
+    }
+
     return TeamModel.create(teamData);
   }
 
@@ -106,6 +117,17 @@ class TeamService {
     // Org Admin cannot change organization
     if (currentUser.role === ROLES.ORG_ADMIN && updateData.organization_id) {
       delete updateData.organization_id;
+    }
+
+    // Check for duplicate team name within organization (if name or organization is being updated)
+    const finalOrgId = updateData.organization_id || team.organization_id;
+    const finalName = updateData.name ? updateData.name.trim() : team.name;
+    
+    if (finalOrgId && finalName && (updateData.name || updateData.organization_id)) {
+      const existing = await TeamModel.findByNameAndOrganization(finalName, finalOrgId);
+      if (existing && existing.id !== teamId) {
+        throw new Error('Team name already exists in this organization');
+      }
     }
 
     return TeamModel.update(teamId, updateData);

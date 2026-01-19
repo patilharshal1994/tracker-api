@@ -59,6 +59,15 @@ export class TeamModel extends BaseModel {
   }
 
   /**
+   * Find team by name and organization_id
+   */
+  async findByNameAndOrganization(name, organizationId) {
+    const query = `SELECT * FROM ${this.tableName} WHERE name = ? AND organization_id = ?`;
+    const [rows] = await pool.query(query, [name, organizationId]);
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  /**
    * Get team with members
    */
   async findByIdWithMembers(teamId) {
