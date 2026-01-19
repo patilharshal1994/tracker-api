@@ -59,6 +59,13 @@ app.get('/health', (req, res) => {
 });
 
 // Swagger API Documentation
+// Serve Swagger JSON spec
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// Serve Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'Issue Tracker API Documentation'
