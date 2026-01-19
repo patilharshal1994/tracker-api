@@ -748,7 +748,10 @@ const options = {
       }
     ]
   },
-  apis: ['./routes/*.js', './controllers/*.js'] // Paths to files containing OpenAPI definitions
+  apis: [
+    './routes/*.js',  // Route files with JSDoc annotations
+    './controllers/*.js'  // Controller files (if adding annotations there)
+  ]
 };
 
 const swaggerSpec = swaggerJsdoc(options);

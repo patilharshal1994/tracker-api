@@ -16,9 +16,5 @@ export const getTicketActivities = async (req, res, next) => {
 
 export const getTicketActivitiesValidation = validate([
   uuidParamValidation('ticketId'),
-  paginationValidation
+  ...paginationValidation
 ]);
-
-export {
-  getTicketActivitiesValidation
-};
