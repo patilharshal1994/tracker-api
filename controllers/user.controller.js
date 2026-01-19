@@ -1,5 +1,7 @@
 import UserService from '../src/services/UserService.js';
-import { createUserValidation, updateUserValidation, getUserValidation, getUsersValidation, resetPasswordValidation } from '../src/validators/user.validator.js';
+import { createUserValidation, updateUserValidation, getUserValidation, getUsersValidation } from '../src/validators/user.validator.js';
+import { body, param } from 'express-validator';
+import { validate } from '../src/validators/auth.validator.js';
 
 /**
  * Get all users with filtering and pagination
@@ -127,7 +129,7 @@ export const deleteUser = async (req, res, next) => {
  */
 export const resetPassword = async (req, res, next) => {
   try {
-    await UserService.resetPassword(req.user, req.params.id, req.body.password);
+    await UserService.resetUserPassword(req.user, req.params.id, req.body.newPassword);
     res.json({ message: 'Password reset successfully' });
   } catch (error) {
     next(error);
@@ -135,10 +137,18 @@ export const resetPassword = async (req, res, next) => {
 };
 
 // Export validators for routes
+export const resetPasswordValidation = validate([
+  param('id')
+    .isUUID()
+    .withMessage('Invalid user ID format'),
+  body('newPassword')
+    .isLength({ min: 8 })
+    .withMessage('New password must be at least 8 characters long')
+]);
+
 export {
   createUserValidation,
   updateUserValidation,
   getUserValidation,
-  getUsersValidation,
-  resetPasswordValidation
+  getUsersValidation
 };
