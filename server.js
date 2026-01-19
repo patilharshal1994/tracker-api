@@ -29,6 +29,10 @@ import templateRoutes from './routes/template.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { logger } from './middleware/logger.middleware.js';
 
+// Import Swagger
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './config/swagger.js';
+
 // Import cron jobs
 import './jobs/slaBreach.job.js';
 
@@ -53,6 +57,12 @@ app.use(logger);
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Issue Tracker API Documentation'
+}));
 
 // API Routes
 app.use('/api/auth', authRoutes);

@@ -79,7 +79,7 @@ export const addMember = async (req, res, next) => {
   }
 };
 
-export const addMemberValidation = validate([
+const addMemberValidation = validate([
   uuidParamValidation('id'),
   body('user_id')
     .isUUID()

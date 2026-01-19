@@ -1,5 +1,4 @@
 import ActivityService from '../src/services/ActivityService.js';
-import ActivityService from '../src/services/ActivityService.js';
 import { uuidParamValidation, paginationValidation } from '../src/validators/common.validator.js';
 import { validate } from '../src/validators/auth.validator.js';
 
