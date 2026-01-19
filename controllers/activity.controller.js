@@ -1,6 +1,7 @@
 import ActivityService from '../src/services/ActivityService.js';
-import { uuidParamValidation, paginationValidation } from '../src/validators/common.validator.js';
+import { uuidParamValidation } from '../src/validators/common.validator.js';
 import { validate } from '../src/validators/auth.validator.js';
+import { param, query } from 'express-validator';
 
 export const getTicketActivities = async (req, res, next) => {
   try {
@@ -15,6 +16,15 @@ export const getTicketActivities = async (req, res, next) => {
 };
 
 export const getTicketActivitiesValidation = validate([
-  uuidParamValidation('ticketId'),
-  ...paginationValidation
+  param('ticketId')
+    .isUUID()
+    .withMessage('Invalid ticket ID format'),
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer'),
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Limit must be between 1 and 100')
 ]);
