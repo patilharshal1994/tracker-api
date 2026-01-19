@@ -24,8 +24,11 @@ class TeamService {
     const teams = await TeamModel.findWithDetails(currentUser, filters, pagination);
     const total = await TeamModel.count(filters);
 
-    // Frontend expects array directly
-    return teams;
+    // Return with pagination metadata (consistent with other endpoints)
+    return {
+      data: teams,
+      pagination: createPaginationMeta(total, pagination.page, pagination.limit)
+    };
   }
 
   /**
@@ -54,6 +57,14 @@ class TeamService {
       throw new Error('Access denied');
     }
 
+    // Clean up empty strings - convert to null
+    if (teamData.organization_id === '' || teamData.organization_id === undefined) {
+      teamData.organization_id = null;
+    }
+    if (teamData.description === '' || teamData.description === undefined) {
+      teamData.description = null;
+    }
+
     // Set organization_id for Org Admin
     if (currentUser.role === ROLES.ORG_ADMIN) {
       teamData.organization_id = currentUser.organization_id;
@@ -74,6 +85,14 @@ class TeamService {
    * Update team
    */
   async updateTeam(currentUser, teamId, updateData) {
+    // Clean up empty strings - convert to null
+    if (updateData.organization_id === '' || updateData.organization_id === undefined) {
+      updateData.organization_id = null;
+    }
+    if (updateData.description === '' || updateData.description === undefined) {
+      updateData.description = null;
+    }
+
     const team = await TeamModel.findById(teamId);
     if (!team) {
       throw new Error('Team not found');
