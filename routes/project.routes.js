@@ -1,65 +1,44 @@
 import express from 'express';
-import { body } from 'express-validator';
 import {
   getProjects,
   getProjectById,
   createProject,
   updateProject,
   deleteProject,
-  addProjectMember,
-  removeProjectMember
+  addMember,
+  removeMember,
+  createProjectValidation,
+  updateProjectValidation,
+  getProjectValidation,
+  getProjectsValidation
 } from '../controllers/project.controller.js';
-import { authenticate, authorize } from '../middleware/auth.middleware.js';
-import { validate } from '../middleware/validation.middleware.js';
+import { authenticate } from '../middleware/auth.middleware.js';
+import { uuidParamValidation } from '../src/validators/common.validator.js';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
 
-// Get all projects (filtered by user role)
-router.get('/', getProjects);
+// Get all projects
+router.get('/', getProjectsValidation, getProjects);
 
 // Get project by ID
-router.get('/:id', getProjectById);
+router.get('/:id', getProjectValidation, getProjectById);
 
-// Create project (admin only)
-router.post(
-  '/',
-  authorize('ADMIN'),
-  [
-    body('name').trim().notEmpty().isLength({ min: 2, max: 255 }),
-    body('description').trim().optional(),
-    body('team_id').isInt().optional({ nullable: true })
-  ],
-  validate,
-  createProject
-);
+// Create project
+router.post('/', createProjectValidation, createProject);
 
 // Update project
-router.put(
-  '/:id',
-  [
-    body('name').trim().isLength({ min: 2, max: 255 }).optional(),
-    body('description').trim().optional(),
-    body('team_id').isInt().optional({ nullable: true })
-  ],
-  validate,
-  updateProject
-);
+router.put('/:id', updateProjectValidation, updateProject);
 
-// Delete project (admin only)
-router.delete('/:id', authorize('ADMIN'), deleteProject);
+// Delete project
+router.delete('/:id', getProjectValidation, deleteProject);
 
-// Add project member
-router.post(
-  '/:id/members',
-  [body('user_id').isInt()],
-  validate,
-  addProjectMember
-);
+// Add member to project
+router.post('/:id/members', getProjectValidation, addMember);
 
-// Remove project member
-router.delete('/:id/members/:userId', removeProjectMember);
+// Remove member from project
+router.delete('/:id/members/:userId', getProjectValidation, uuidParamValidation('userId'), removeMember);
 
 export default router;

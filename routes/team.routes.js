@@ -1,14 +1,16 @@
 import express from 'express';
-import { body } from 'express-validator';
 import {
   getTeams,
   getTeamById,
   createTeam,
   updateTeam,
-  deleteTeam
+  deleteTeam,
+  createTeamValidation,
+  updateTeamValidation,
+  getTeamValidation,
+  getTeamsValidation
 } from '../controllers/team.controller.js';
-import { authenticate, authorize } from '../middleware/auth.middleware.js';
-import { validate } from '../middleware/validation.middleware.js';
+import { authenticate } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
@@ -16,30 +18,18 @@ const router = express.Router();
 router.use(authenticate);
 
 // Get all teams
-router.get('/', getTeams);
+router.get('/', getTeamsValidation, getTeams);
 
 // Get team by ID
-router.get('/:id', getTeamById);
+router.get('/:id', getTeamValidation, getTeamById);
 
-// Create team (admin only)
-router.post(
-  '/',
-  authorize('ADMIN'),
-  [body('name').trim().notEmpty().isLength({ min: 2, max: 255 })],
-  validate,
-  createTeam
-);
+// Create team
+router.post('/', createTeamValidation, createTeam);
 
-// Update team (admin only)
-router.put(
-  '/:id',
-  authorize('ADMIN'),
-  [body('name').trim().notEmpty().isLength({ min: 2, max: 255 })],
-  validate,
-  updateTeam
-);
+// Update team
+router.put('/:id', updateTeamValidation, updateTeam);
 
-// Delete team (admin only)
-router.delete('/:id', authorize('ADMIN'), deleteTeam);
+// Delete team
+router.delete('/:id', getTeamValidation, deleteTeam);
 
 export default router;

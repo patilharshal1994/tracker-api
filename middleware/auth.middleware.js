@@ -1,6 +1,10 @@
 import jwt from 'jsonwebtoken';
 import pool from '../config/database.js';
 
+/**
+ * Authentication middleware
+ * Verifies JWT token and attaches user to request
+ */
 export const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -14,10 +18,13 @@ export const authenticate = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
-      // Verify user still exists and is active
-      const [users] = await pool.execute(
-        'SELECT id, name, email, role, team_id, is_active FROM users WHERE id = ?',
-        [decoded.userId]
+      // Verify user still exists and is active - fetch all user fields including organization_id
+      const [users] = await pool.query(
+        `SELECT 
+          id, name, email, role, organization_id, team_id, is_active, 
+          phone, designation, department, specialty, bio
+        FROM users WHERE id = ?`,
+        [decoded.userId || decoded.user?.id]
       );
 
       if (users.length === 0) {
@@ -26,11 +33,29 @@ export const authenticate = async (req, res, next) => {
 
       const user = users[0];
 
+      // Handle UUID vs integer ID
+      const userId = user.id;
+
       if (!user.is_active) {
         return res.status(403).json({ error: 'Account is inactive' });
       }
 
-      req.user = user;
+      // Attach full user object to request
+      req.user = {
+        id: userId,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        organization_id: user.organization_id,
+        team_id: user.team_id,
+        is_active: user.is_active,
+        phone: user.phone,
+        designation: user.designation,
+        department: user.department,
+        specialty: user.specialty,
+        bio: user.bio
+      };
+      
       next();
     } catch (err) {
       if (err.name === 'TokenExpiredError') {
@@ -43,6 +68,10 @@ export const authenticate = async (req, res, next) => {
   }
 };
 
+/**
+ * Authorization middleware
+ * Checks if user has required role
+ */
 export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
