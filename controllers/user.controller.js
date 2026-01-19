@@ -9,8 +9,15 @@ import { validate } from '../src/validators/auth.validator.js';
 export const getUsers = async (req, res, next) => {
   try {
     const result = await UserService.getUsers(req.user, req.query);
-    // Frontend expects response.data to be array
-    res.json(result.data || result);
+    // Frontend expects response.data to be array directly for dropdowns/list pages
+    // If result has data property (paginated response), return data, otherwise return result array
+    if (result.data && Array.isArray(result.data)) {
+      res.json({ data: result.data });
+    } else if (Array.isArray(result)) {
+      res.json({ data: result });
+    } else {
+      res.json({ data: result });
+    }
   } catch (error) {
     next(error);
   }

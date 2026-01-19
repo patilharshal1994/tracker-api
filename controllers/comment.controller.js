@@ -89,6 +89,7 @@ export const createComment = async (req, res, next) => {
           // For now, we'll just return the comment
         }
 
+        // Frontend expects comment object directly
         res.status(201).json(comment);
       } catch (error) {
         next(error);

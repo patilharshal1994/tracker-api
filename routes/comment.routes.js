@@ -1,8 +1,10 @@
 import express from 'express';
 import {
   getComments,
+  createComment,
   updateComment,
   deleteComment,
+  createCommentValidation,
   updateCommentValidation,
   deleteCommentValidation,
   getCommentsValidation

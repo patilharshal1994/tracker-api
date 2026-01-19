@@ -104,6 +104,10 @@ class TicketService {
       throw new Error('Access denied');
     }
 
+    // Extract mentioned_users (if provided) - they will be notified after ticket creation
+    const mentionedUsers = ticketData.mentioned_users || [];
+    delete ticketData.mentioned_users; // Remove from ticketData as it's not a ticket field
+
     // Set reporter
     ticketData.reporter_id = currentUser.id;
 
@@ -123,6 +127,22 @@ class TicketService {
         related_entity_type: 'ticket',
         related_entity_id: ticket.id
       });
+    }
+
+    // Notify mentioned users
+    if (mentionedUsers.length > 0) {
+      for (const userId of mentionedUsers) {
+        if (userId !== currentUser.id) {
+          await NotificationService.createNotification({
+            user_id: userId,
+            title: 'Mentioned in Ticket',
+            message: `${currentUser.name} mentioned you in ticket: ${ticket.title}`,
+            type: 'mention',
+            related_entity_type: 'ticket',
+            related_entity_id: ticket.id
+          });
+        }
+      }
     }
 
     return ticket;

@@ -13,7 +13,13 @@ export const getProjects = async (req, res, next) => {
   try {
     const result = await ProjectService.getProjects(req.user, req.query);
     // Frontend expects response.data to be array
-    res.json(result.data || result);
+    if (result.data && Array.isArray(result.data)) {
+      res.json({ data: result.data });
+    } else if (Array.isArray(result)) {
+      res.json({ data: result });
+    } else {
+      res.json({ data: result });
+    }
   } catch (error) {
     next(error);
   }
