@@ -3,8 +3,10 @@ import { validate } from './auth.validator.js';
 
 export const createTicketValidation = validate([
   body('project_id')
-    .isUUID()
-    .withMessage('Invalid project ID format'),
+    .notEmpty()
+    .withMessage('Project ID is required')
+    .isString()
+    .withMessage('Project ID must be a string'),
   body('title')
     .trim()
     .isLength({ min: 3, max: 500 })
@@ -32,8 +34,8 @@ export const createTicketValidation = validate([
   body('assignee_id')
     .notEmpty()
     .withMessage('Assignee is required')
-    .isUUID()
-    .withMessage('Invalid assignee ID format'),
+    .isString()
+    .withMessage('Assignee ID must be a string'),
   body('due_date')
     .optional()
     .isISO8601()
@@ -44,22 +46,24 @@ export const createTicketValidation = validate([
     .withMessage('Tags must be an array'),
   body('tags.*')
     .optional()
-    .isUUID()
-    .withMessage('Invalid tag ID format'),
+    .isString()
+    .withMessage('Tag ID must be a string'),
   body('mentioned_users')
     .optional()
     .isArray()
     .withMessage('mentioned_users must be an array'),
   body('mentioned_users.*')
     .optional()
-    .isUUID()
-    .withMessage('Invalid user ID in mentioned_users')
+    .isString()
+    .withMessage('User ID in mentioned_users must be a string')
 ]);
 
 export const updateTicketValidation = validate([
   param('id')
-    .isUUID()
-    .withMessage('Invalid ticket ID format'),
+    .notEmpty()
+    .withMessage('Ticket ID is required')
+    .isString()
+    .withMessage('Ticket ID must be a string'),
   body('title')
     .optional()
     .trim()
@@ -99,7 +103,8 @@ export const getTicketValidation = validate([
   param('id')
     .notEmpty()
     .withMessage('Ticket ID is required')
-    .trim()
+    .isString()
+    .withMessage('Ticket ID must be a string')
     // Allow any string format - UUID validation happens in service layer
     // This allows for encoded IDs or other formats that the frontend might use
 ]);
@@ -141,8 +146,10 @@ export const getTicketsValidation = validate([
 
 export const addCommentValidation = validate([
   param('id')
-    .isUUID()
-    .withMessage('Invalid ticket ID format'),
+    .notEmpty()
+    .withMessage('Ticket ID is required')
+    .isString()
+    .withMessage('Ticket ID must be a string'),
   body('comment_text')
     .trim()
     .notEmpty()
@@ -159,8 +166,10 @@ export const addCommentValidation = validate([
 
 export const addTagValidation = validate([
   param('id')
-    .isUUID()
-    .withMessage('Invalid ticket ID format'),
+    .notEmpty()
+    .withMessage('Ticket ID is required')
+    .isString()
+    .withMessage('Ticket ID must be a string'),
   body('tag_id')
     .isUUID()
     .withMessage('Invalid tag ID format')
@@ -168,8 +177,10 @@ export const addTagValidation = validate([
 
 export const addWatcherValidation = validate([
   param('id')
-    .isUUID()
-    .withMessage('Invalid ticket ID format'),
+    .notEmpty()
+    .withMessage('Ticket ID is required')
+    .isString()
+    .withMessage('Ticket ID must be a string'),
   body('user_id')
     .isUUID()
     .withMessage('Invalid user ID format')
@@ -177,8 +188,10 @@ export const addWatcherValidation = validate([
 
 export const addRelationshipValidation = validate([
   param('id')
-    .isUUID()
-    .withMessage('Invalid ticket ID format'),
+    .notEmpty()
+    .withMessage('Ticket ID is required')
+    .isString()
+    .withMessage('Ticket ID must be a string'),
   body('related_ticket_id')
     .isUUID()
     .withMessage('Invalid related ticket ID format'),
@@ -189,8 +202,10 @@ export const addRelationshipValidation = validate([
 
 export const logTimeValidation = validate([
   param('id')
-    .isUUID()
-    .withMessage('Invalid ticket ID format'),
+    .notEmpty()
+    .withMessage('Ticket ID is required')
+    .isString()
+    .withMessage('Ticket ID must be a string'),
   body('hours')
     .isFloat({ min: 0.01 })
     .withMessage('Hours must be a positive number'),

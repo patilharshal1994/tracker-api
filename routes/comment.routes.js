@@ -4,7 +4,6 @@ import {
   createComment,
   updateComment,
   deleteComment,
-  createCommentValidation,
   updateCommentValidation,
   deleteCommentValidation,
   getCommentsValidation
@@ -80,7 +79,8 @@ router.get('/ticket/:ticketId', getCommentsValidation, getComments);
  *             schema:
  *               $ref: '#/components/schemas/Comment'
  */
-router.post('/', createCommentValidation, createComment);
+// Note: Validation happens inside createComment after multer processes multipart/form-data
+router.post('/', createComment);
 
 /**
  * @swagger

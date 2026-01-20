@@ -51,6 +51,7 @@ const upload = multer({
 
 /**
  * Create comment (with file upload support)
+ * Validation happens after multer processes multipart/form-data
  */
 export const createComment = async (req, res, next) => {
   try {
@@ -62,7 +63,34 @@ export const createComment = async (req, res, next) => {
       }
 
       try {
+        // Validate after multer processes the form data
         const { ticket_id, comment_text, mentioned_users } = req.body;
+        
+        // Manual validation (since express-validator doesn't work well with multipart/form-data)
+        if (!ticket_id || typeof ticket_id !== 'string' || ticket_id.trim() === '') {
+          return res.status(400).json({ 
+            errors: [{ 
+              type: 'field', 
+              value: ticket_id || '', 
+              msg: 'Ticket ID is required', 
+              path: 'ticket_id', 
+              location: 'body' 
+            }] 
+          });
+        }
+        
+        if (!comment_text || typeof comment_text !== 'string' || comment_text.trim() === '') {
+          return res.status(400).json({ 
+            errors: [{ 
+              type: 'field', 
+              value: '', 
+              msg: 'Comment text is required', 
+              path: 'comment_text', 
+              location: 'body' 
+            }] 
+          });
+        }
+        
         let mentionedUserIds = [];
 
         // Parse mentioned_users if provided
@@ -71,6 +99,11 @@ export const createComment = async (req, res, next) => {
             mentionedUserIds = typeof mentioned_users === 'string' 
               ? JSON.parse(mentioned_users) 
               : mentioned_users;
+            
+            // Validate it's an array
+            if (!Array.isArray(mentionedUserIds)) {
+              mentionedUserIds = [];
+            }
           } catch (e) {
             // If parsing fails, try as array
             mentionedUserIds = Array.isArray(mentioned_users) ? mentioned_users : [];
@@ -78,8 +111,8 @@ export const createComment = async (req, res, next) => {
         }
 
         // Use TicketService to add comment (handles activity logging and notifications)
-        const comment = await TicketService.addComment(req.user, ticket_id, {
-          comment_text,
+        const comment = await TicketService.addComment(req.user, ticket_id.trim(), {
+          comment_text: comment_text.trim(),
           mentioned_user_ids: mentionedUserIds
         });
 
@@ -207,14 +240,18 @@ export const deleteCommentValidation = validate([
 
 export const getCommentsValidation = validate([
   param('ticketId')
-    .isUUID()
-    .withMessage('Invalid ticket ID format')
+    .notEmpty()
+    .withMessage('Ticket ID is required')
+    .isString()
+    .withMessage('Ticket ID must be a string')
 ]);
 
 export const createCommentValidation = validate([
   body('ticket_id')
-    .isUUID()
-    .withMessage('Invalid ticket ID format'),
+    .notEmpty()
+    .withMessage('Ticket ID is required')
+    .isString()
+    .withMessage('Ticket ID must be a string'),
   body('comment_text')
     .trim()
     .notEmpty()

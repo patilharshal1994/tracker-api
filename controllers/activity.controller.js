@@ -17,8 +17,10 @@ export const getTicketActivities = async (req, res, next) => {
 
 export const getTicketActivitiesValidation = validate([
   param('ticketId')
-    .isUUID()
-    .withMessage('Invalid ticket ID format'),
+    .notEmpty()
+    .withMessage('Ticket ID is required')
+    .isString()
+    .withMessage('Ticket ID must be a string'),
   query('page')
     .optional()
     .isInt({ min: 1 })
