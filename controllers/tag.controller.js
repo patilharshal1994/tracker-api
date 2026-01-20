@@ -6,8 +6,8 @@ import { validate } from '../src/validators/auth.validator.js';
 export const getTags = async (req, res, next) => {
   try {
     const result = await TagService.getTags(req.query);
-    // Frontend expects response.data to be array
-    res.json(result.data || result);
+    // Return consistent format: { data: [...], pagination: {...} }
+    res.json(result);
   } catch (error) {
     next(error);
   }

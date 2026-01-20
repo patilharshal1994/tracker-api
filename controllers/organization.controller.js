@@ -8,8 +8,9 @@ import {
 
 export const getOrganizations = async (req, res, next) => {
   try {
-    const organizations = await OrganizationService.getOrganizations(req.user, req.query);
-    res.json(organizations);
+    const result = await OrganizationService.getOrganizations(req.user, req.query);
+    // Return consistent format: { data: [...], pagination: {...} }
+    res.json(result);
   } catch (error) {
     next(error);
   }

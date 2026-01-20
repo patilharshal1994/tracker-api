@@ -13,9 +13,9 @@ import {
 
 export const getTickets = async (req, res, next) => {
   try {
-    const tickets = await TicketService.getTickets(req.user, req.query);
-    // Frontend expects response.data to be array
-    res.json(tickets);
+    const result = await TicketService.getTickets(req.user, req.query);
+    // Return { data: [...], pagination: {...} } format for consistency
+    res.json(result);
   } catch (error) {
     next(error);
   }

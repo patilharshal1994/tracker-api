@@ -45,8 +45,11 @@ class TicketService {
     const tickets = await TicketModel.findWithFilters(currentUser, filters, pagination);
     const total = await TicketModel.countWithFilters(currentUser, filters);
 
-    // Frontend expects array directly, not wrapped in data
-    return tickets;
+    // Return with pagination metadata for consistency with other services
+    return {
+      data: tickets,
+      pagination: createPaginationMeta(total, pagination.page, pagination.limit)
+    };
   }
 
   /**
@@ -108,11 +111,54 @@ class TicketService {
     const mentionedUsers = ticketData.mentioned_users || [];
     delete ticketData.mentioned_users; // Remove from ticketData as it's not a ticket field
 
+    // Extract tags (if provided) - they will be added after ticket creation
+    const tagIds = ticketData.tags || [];
+    delete ticketData.tags; // Remove from ticketData as it's not a ticket field
+
     // Set reporter
     ticketData.reporter_id = currentUser.id;
 
+    // Only include valid ticket fields to prevent SQL errors
+    const validTicketFields = [
+      'project_id', 'type', 'title', 'description', 'module', 'reporter_id',
+      'assignee_id', 'branch_name', 'scenario', 'start_date', 'due_date',
+      'duration_hours', 'breach_threshold_minutes', 'status', 'priority',
+      'is_breached', 'last_breach_notified_at'
+    ];
+    
+    const cleanTicketData = {};
+    for (const key of validTicketFields) {
+      // Only include if key exists and is not undefined
+      if (ticketData.hasOwnProperty(key) && ticketData[key] !== undefined) {
+        // For optional string fields, convert empty strings to null
+        if (ticketData[key] === '' && ['description', 'module', 'branch_name', 'scenario'].includes(key)) {
+          cleanTicketData[key] = null;
+        } else {
+          // Include the value (null is allowed for nullable columns)
+          cleanTicketData[key] = ticketData[key];
+        }
+      }
+    }
+    
+    // Ensure required fields are present
+    if (!cleanTicketData.project_id) {
+      throw new Error('Project ID is required');
+    }
+    if (!cleanTicketData.title || cleanTicketData.title.trim() === '') {
+      throw new Error('Title is required');
+    }
+    if (!cleanTicketData.assignee_id) {
+      throw new Error('Assignee ID is required');
+    }
+
+    // Debug logging
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Clean Ticket Data:', JSON.stringify(cleanTicketData, null, 2));
+    }
+
+    console.log('Clean Ticket Data:', cleanTicketData);
     // Create ticket
-    const ticket = await TicketModel.create(ticketData);
+    const ticket = await TicketModel.create(cleanTicketData);
 
     // Log activity
     await ActivityModel.logTicketCreated(ticket.id, currentUser.id, ticket);
@@ -145,6 +191,28 @@ class TicketService {
       }
     }
 
+    // Add tags to ticket
+    if (tagIds.length > 0) {
+      for (const tagId of tagIds) {
+        try {
+          const tag = await TagModel.findById(tagId);
+          if (tag) {
+            // Check if already exists
+            const exists = await TicketTagModel.exists(ticket.id, tagId);
+            if (!exists) {
+              await TicketTagModel.create({
+                ticket_id: ticket.id,
+                tag_id: tagId
+              });
+            }
+          }
+        } catch (error) {
+          // Log error but don't fail ticket creation if tag doesn't exist
+          console.error(`Failed to add tag ${tagId} to ticket:`, error);
+        }
+      }
+    }
+
     return ticket;
   }
 
@@ -162,42 +230,61 @@ class TicketService {
       throw new Error('Access denied');
     }
 
+    // Only include valid ticket fields
+    const validTicketFields = [
+      'type', 'title', 'description', 'module', 'assignee_id', 'branch_name', 
+      'scenario', 'start_date', 'due_date', 'duration_hours', 'breach_threshold_minutes', 
+      'status', 'priority', 'is_breached', 'last_breach_notified_at'
+    ];
+    
+    const cleanUpdateData = {};
+    for (const key of validTicketFields) {
+      if (updateData.hasOwnProperty(key) && updateData[key] !== undefined) {
+        // For optional string fields, convert empty strings to null
+        if (updateData[key] === '' && ['description', 'module', 'branch_name', 'scenario'].includes(key)) {
+          cleanUpdateData[key] = null;
+        } else {
+          cleanUpdateData[key] = updateData[key];
+        }
+      }
+    }
+
     // Log changes before update
     const changes = {};
 
     // Log status change
-    if (updateData.status && updateData.status !== existingTicket.status) {
+    if (cleanUpdateData.status && cleanUpdateData.status !== existingTicket.status) {
       await ActivityModel.logStatusChange(
         ticketId,
         currentUser.id,
         existingTicket.status,
-        updateData.status
+        cleanUpdateData.status
       );
-      changes.status = { old: existingTicket.status, new: updateData.status };
+      changes.status = { old: existingTicket.status, new: cleanUpdateData.status };
     }
 
     // Log assignee change
-    if (updateData.assignee_id !== undefined && updateData.assignee_id !== existingTicket.assignee_id) {
-      const oldAssignee = updateData.assignee_id !== existingTicket.assignee_id && existingTicket.assignee_id
+    if (cleanUpdateData.assignee_id !== undefined && cleanUpdateData.assignee_id !== existingTicket.assignee_id) {
+      const oldAssignee = cleanUpdateData.assignee_id !== existingTicket.assignee_id && existingTicket.assignee_id
         ? await UserModel.findById(existingTicket.assignee_id)
         : null;
-      const newAssignee = updateData.assignee_id
-        ? await UserModel.findById(updateData.assignee_id)
+      const newAssignee = cleanUpdateData.assignee_id
+        ? await UserModel.findById(cleanUpdateData.assignee_id)
         : null;
 
       await ActivityModel.logAssigneeChange(
         ticketId,
         currentUser.id,
         existingTicket.assignee_id,
-        updateData.assignee_id,
+        cleanUpdateData.assignee_id,
         oldAssignee?.name || null,
         newAssignee?.name || null
       );
 
       // Notify new assignee
-      if (newAssignee && updateData.assignee_id !== currentUser.id) {
+      if (newAssignee && cleanUpdateData.assignee_id !== currentUser.id) {
         await NotificationService.createNotification({
-          user_id: updateData.assignee_id,
+          user_id: cleanUpdateData.assignee_id,
           title: 'Ticket Assigned',
           message: `You have been assigned to ticket: ${existingTicket.title}`,
           type: 'ticket_assigned',
@@ -208,30 +295,30 @@ class TicketService {
     }
 
     // Log priority change
-    if (updateData.priority && updateData.priority !== existingTicket.priority) {
+    if (cleanUpdateData.priority && cleanUpdateData.priority !== existingTicket.priority) {
       await ActivityModel.logPriorityChange(
         ticketId,
         currentUser.id,
         existingTicket.priority,
-        updateData.priority
+        cleanUpdateData.priority
       );
     }
 
     // Log other field changes
     const fieldsToLog = ['title', 'description', 'module', 'type', 'due_date'];
     for (const field of fieldsToLog) {
-      if (updateData[field] !== undefined && updateData[field] !== existingTicket[field]) {
+      if (cleanUpdateData[field] !== undefined && cleanUpdateData[field] !== existingTicket[field]) {
         await ActivityModel.logFieldUpdate(
           ticketId,
           currentUser.id,
           field,
           existingTicket[field],
-          updateData[field]
+          cleanUpdateData[field]
         );
       }
     }
 
-    const updatedTicket = await TicketModel.update(ticketId, updateData);
+    const updatedTicket = await TicketModel.update(ticketId, cleanUpdateData);
     return updatedTicket;
   }
 

@@ -72,10 +72,21 @@ export class BaseModel {
     const id = this.generateId();
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
     
+    // Start with primary key
     const record = {
-      [this.primaryKey]: id,
-      ...data
+      [this.primaryKey]: id
     };
+    
+    // Add data fields (only valid ones)
+    for (const [key, value] of Object.entries(data)) {
+      if (key && 
+          typeof key === 'string' && 
+          key.trim() !== '' && 
+          /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key.trim()) &&
+          value !== undefined) {
+        record[key.trim()] = value;
+      }
+    }
     
     // Only add created_at if it's not already provided
     if (!record.created_at) {
@@ -83,19 +94,31 @@ export class BaseModel {
     }
     
     // Only add updated_at if the table has this column
-    // Tables that might not have updated_at: project_members, ticket_tags, ticket_watchers, ticket_relationships, ticket_activities
-    // But for now, we'll let the database schema handle this - if column doesn't exist, it will error
-    // For refresh_tokens and other tables used by BaseModel, we ensure updated_at exists
     const tablesWithoutUpdatedAt = ['project_members', 'ticket_tags', 'ticket_watchers', 'ticket_relationships', 'ticket_activities', 'ticket_attachments', 'notifications'];
     if (!tablesWithoutUpdatedAt.includes(this.tableName) && !record.updated_at) {
       record.updated_at = timestamp;
     }
 
-    const columns = Object.keys(record).join(', ');
-    const placeholders = Object.keys(record).map(() => '?').join(', ');
-    const values = Object.values(record);
+    // Build SQL query - record now only contains valid fields
+    const columns = Object.keys(record);
+    const placeholders = columns.map(() => '?').join(', ');
+    const values = columns.map(k => record[k]);
+    const columnsStr = columns.join(', ');
 
-    const query = `INSERT INTO ${this.tableName} (${columns}) VALUES (${placeholders})`;
+    if (!columnsStr || columns.length === 0) {
+      throw new Error('No valid columns to insert');
+    }
+
+    const query = `INSERT INTO ${this.tableName} (${columnsStr}) VALUES (${placeholders})`;
+    
+    // Debug logging (remove in production)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('SQL Query:', query);
+      console.log('Columns:', columnsStr);
+      console.log('Values:', values);
+      console.log('Record:', record);
+    }
+    
     await pool.query(query, values);
     
     return this.findById(id);
@@ -107,12 +130,26 @@ export class BaseModel {
   async update(id, data) {
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
     
-    const updateData = { ...data };
+    // Filter out invalid fields
+    const updateData = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (key && 
+          typeof key === 'string' && 
+          key.trim() !== '' && 
+          /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key.trim()) &&
+          value !== undefined) {
+        updateData[key.trim()] = value;
+      }
+    }
     
     // Only add updated_at if the table has this column
     const tablesWithoutUpdatedAt = ['project_members', 'ticket_tags', 'ticket_watchers', 'ticket_relationships', 'ticket_activities', 'ticket_attachments', 'notifications'];
     if (!tablesWithoutUpdatedAt.includes(this.tableName)) {
       updateData.updated_at = timestamp;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      throw new Error('No valid fields to update');
     }
 
     const setClause = Object.keys(updateData).map(key => `${key} = ?`).join(', ');

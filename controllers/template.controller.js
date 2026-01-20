@@ -8,8 +8,9 @@ import {
 
 export const getTemplates = async (req, res, next) => {
   try {
-    const templates = await TemplateService.getTemplates(req.user, req.query);
-    res.json(templates);
+    const result = await TemplateService.getTemplates(req.user, req.query);
+    // Return consistent format: { data: [...], pagination: {...} }
+    res.json(result);
   } catch (error) {
     next(error);
   }

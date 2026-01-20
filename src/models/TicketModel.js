@@ -146,13 +146,43 @@ export class TicketModel extends BaseModel {
       params.push(user.id, user.id);
     }
 
-    // Apply filters
-    Object.keys(filters).forEach((key) => {
-      if (filters[key] !== undefined && filters[key] !== null && key !== 'search') {
-        conditions.push(`t.${key} = ?`);
-        params.push(filters[key]);
-      }
-    });
+    // Apply filters (matching findWithFilters logic)
+    if (filters.project_id) {
+      conditions.push('t.project_id = ?');
+      params.push(filters.project_id);
+    }
+    if (filters.status) {
+      conditions.push('t.status = ?');
+      params.push(filters.status);
+    }
+    if (filters.priority) {
+      conditions.push('t.priority = ?');
+      params.push(filters.priority);
+    }
+    if (filters.type) {
+      conditions.push('t.type = ?');
+      params.push(filters.type);
+    }
+    if (filters.module) {
+      conditions.push('t.module = ?');
+      params.push(filters.module);
+    }
+    if (filters.assignee_id) {
+      conditions.push('t.assignee_id = ?');
+      params.push(filters.assignee_id);
+    }
+    if (filters.reporter_id) {
+      conditions.push('t.reporter_id = ?');
+      params.push(filters.reporter_id);
+    }
+    if (filters.is_breached !== undefined) {
+      conditions.push('t.is_breached = ?');
+      params.push(filters.is_breached);
+    }
+    if (filters.search) {
+      conditions.push('(t.title LIKE ? OR t.description LIKE ?)');
+      params.push(`%${filters.search}%`, `%${filters.search}%`);
+    }
 
     if (conditions.length > 0) {
       query += ` WHERE ${conditions.join(' AND ')}`;

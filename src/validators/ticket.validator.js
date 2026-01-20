@@ -30,13 +30,30 @@ export const createTicketValidation = validate([
     .isLength({ max: 255 })
     .withMessage('Module must be less than 255 characters'),
   body('assignee_id')
-    .optional()
+    .notEmpty()
+    .withMessage('Assignee is required')
     .isUUID()
     .withMessage('Invalid assignee ID format'),
   body('due_date')
     .optional()
     .isISO8601()
-    .withMessage('Invalid due date format')
+    .withMessage('Invalid due date format'),
+  body('tags')
+    .optional()
+    .isArray()
+    .withMessage('Tags must be an array'),
+  body('tags.*')
+    .optional()
+    .isUUID()
+    .withMessage('Invalid tag ID format'),
+  body('mentioned_users')
+    .optional()
+    .isArray()
+    .withMessage('mentioned_users must be an array'),
+  body('mentioned_users.*')
+    .optional()
+    .isUUID()
+    .withMessage('Invalid user ID in mentioned_users')
 ]);
 
 export const updateTicketValidation = validate([
@@ -80,8 +97,11 @@ export const updateTicketValidation = validate([
 
 export const getTicketValidation = validate([
   param('id')
-    .isUUID()
-    .withMessage('Invalid ticket ID format')
+    .notEmpty()
+    .withMessage('Ticket ID is required')
+    .trim()
+    // Allow any string format - UUID validation happens in service layer
+    // This allows for encoded IDs or other formats that the frontend might use
 ]);
 
 export const getTicketsValidation = validate([
